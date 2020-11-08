@@ -1,5 +1,6 @@
+import sys
 def main():
-    print("autoencoder.py")
+	file=sys.argv[2];
 
 if __name__ == "__main__":
     main()
