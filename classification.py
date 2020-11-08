@@ -28,11 +28,6 @@ def main():
 			model=sys.argv[i+1]
 		if coun1==True and coun2==True and coun3==True and coun4==True and coun5==True:
 			break
-	print('training_set=',training_set)
-	print('training_labels=',training_labels)
-	print('test_set=',test_set)
-	print('test_labels=',test_labels)
-	print('model=',model)
 
 
 
