@@ -79,15 +79,11 @@ def main():
 	e2=createNParray_of_Labels_set(f2,number_of_items_training_label)
 	e4=createNParray_of_Labels_set(f4,number_of_items_test_label)
 	e1,e2,e3,e4=reshaping(e1,e2,e3,e4,rows_number_train_set,columns_number_train_set,rows_number_test_set,columns_number_test_set)
-	print(e1.shape)
-	print(e2.shape)
-	print(e3.shape)
-	print(e4.shape)
 	f1.close()
 	f2.close()
 	f3.close()
 	f4.close()
-	###################
+	########################
 
 if __name__ == "__main__":
     main()
