@@ -62,10 +62,10 @@ def main():
 			test_labels=sys.argv[i+1]
 		elif sys.argv[i]=='-model' and coun5==False:
 			coun5=True
-			model=sys.argv[i+1]
+			model_string=sys.argv[i+1]
 		if coun1==True and coun2==True and coun3==True and coun4==True and coun5==True:
 			break
-	#Data   Preprocessing
+	######Data   Preprocessing
 	f1=open(training_set,'rb')
 	f2=open(training_labels,'rb')
 	f3=open(test_set,'rb')
@@ -79,6 +79,7 @@ def main():
 	e2=createNParray_of_Labels_set(f2,number_of_items_training_label)
 	e4=createNParray_of_Labels_set(f4,number_of_items_test_label)
 	e1,e2,e3,e4=reshaping(e1,e2,e3,e4,rows_number_train_set,columns_number_train_set,rows_number_test_set,columns_number_test_set)
+	#model = keras.models.load_model(model_string)
 	f1.close()
 	f2.close()
 	f3.close()
