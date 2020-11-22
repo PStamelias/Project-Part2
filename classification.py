@@ -79,7 +79,18 @@ def main():
 	e2=createNParray_of_Labels_set(f2,number_of_items_training_label)
 	e4=createNParray_of_Labels_set(f4,number_of_items_test_label)
 	e1,e2,e3,e4=reshaping(e1,e2,e3,e4,rows_number_train_set,columns_number_train_set,rows_number_test_set,columns_number_test_set)
-	#model = keras.models.load_model(model_string)
+	f=open("info.txt","r")
+	newlist = [line.rstrip() for line in f.readlines()]
+	numOfLayers=newlist[0]
+	x_filter=newlist[1]
+	y_filter=newlist[2]
+	filtersPerLayer=newlist[3]
+	epochs=newlist[4]
+	batch_size=newlist[5]
+	ConvLayersEnc=newlist[6]
+	ConvLayersDec=newlist[7]
+	f.close()
+	model = keras.models.load_model(model_string)
 	f1.close()
 	f2.close()
 	f3.close()
