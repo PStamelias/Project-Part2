@@ -115,7 +115,7 @@ def main():
    		layer.trainable = False
 
    	###Missing
-   	for layer in range(0,2*int(ConvLayersEnc)+2):
+	for layer in range(0,2*int(ConvLayersEnc)+2):
    		layer.trainable = True
 
 if __name__ == "__main__":
