@@ -80,7 +80,6 @@ def GiveHyperparameters():
 
 #Built Encoder of autoencoder
 def Encoder(input_img, filtersPerLayer, ConvLayersEnc, x_filter, y_filter):
-
 	count = 0
 
 	for value in filtersPerLayer:

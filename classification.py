@@ -4,12 +4,15 @@ from tensorflow import keras
 from keras.models import Sequential
 from keras.layers import Dense, Flatten, Conv2D, MaxPooling2D, Dropout
 from tensorflow.keras import layers
+from keras.layers import Input,UpSampling2D
 from keras.utils import to_categorical
 import numpy as np
 from keras.models import load_model
 import matplotlib.pyplot as plt
 from autoencoder import getInfo
+import ast 
 from autoencoder import createNParray
+from autoencoder import Encoder
 
 def Opening_set_file(file):
 	image_number,rows_number,columns_number=getInfo(file)
@@ -22,11 +25,18 @@ def Opening_labels_file(f):
 	number_of_items=(temp[0]<<24)|(temp[1]<<16)|(temp[2]<<8)|temp[3]
 	return number_of_items
 
+def fc(enco):
+    flat = Flatten()(enco)
+    den = Dense(128, activation='relu')(flat)
+    num_classes=10
+    out = Dense(num_classes, activation='softmax')(den)
+    return out
 
 def createNParray_of_Labels_set(f,number):
 	e=f.read(number)
 	e=np.frombuffer(e,dtype = np.uint8).astype(np.int64)  
 	return e
+
 
 
 def reshaping(e1,e2,e3,e4,x1,y1,x2,y2):
@@ -44,6 +54,7 @@ def main():
 	model=""    
 	coun1=False
 	coun2=False
+	inChannel=1
 	coun3=False
 	coun4=False
 	coun5=False
@@ -79,6 +90,11 @@ def main():
 	e2=createNParray_of_Labels_set(f2,number_of_items_training_label)
 	e4=createNParray_of_Labels_set(f4,number_of_items_test_label)
 	e1,e2,e3,e4=reshaping(e1,e2,e3,e4,rows_number_train_set,columns_number_train_set,rows_number_test_set,columns_number_test_set)
+	f1.close()
+	f2.close()
+	f3.close()
+	f4.close()
+	###########################
 	f=open("info.txt","r")
 	newlist = [line.rstrip() for line in f.readlines()]
 	numOfLayers=newlist[0]
@@ -89,13 +105,18 @@ def main():
 	batch_size=newlist[5]
 	ConvLayersEnc=newlist[6]
 	ConvLayersDec=newlist[7]
+	res = ast.literal_eval(filtersPerLayer)
 	f.close()
 	model = keras.models.load_model(model_string)
-	f1.close()
-	f2.close()
-	f3.close()
-	f4.close()
-	########################
+	input_img = Input(shape = (rows_number_train_set, columns_number_train_set, inChannel))
+	enco=Encoder(input_img, res,int(ConvLayersEnc),int(x_filter),int(y_filter))
+	full_model = model(input_img,fc(enco))
+	for layer in range(0,2*int(ConvLayersEnc)+2):
+   		layer.trainable = False
+
+   	###Missing
+   	for layer in range(0,2*int(ConvLayersEnc)+2):
+   		layer.trainable = True
 
 if __name__ == "__main__":
     main()
