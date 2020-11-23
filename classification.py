@@ -111,12 +111,17 @@ def main():
 	input_img = Input(shape = (rows_number_train_set, columns_number_train_set, inChannel))
 	enco=Encoder(input_img, res,int(ConvLayersEnc),int(x_filter),int(y_filter))
 	full_model = model(input_img,fc(enco))
-	for layer in range(0,2*int(ConvLayersEnc)+2):
+	for l1,l2 in zip(full_model.layers[:2*int(ConvLayersEnc)+3],autoencoder.layers[0:2*int(ConvLayersEnc)+3]):
+		l1.set_weights(l2.get_weights())
+	for layer in full_model.layers[0:2*int(ConvLayersEnc)+3]:
    		layer.trainable = False
-
-   	###Missing
-	for layer in range(0,2*int(ConvLayersEnc)+2):
+	full_model.compile(loss=keras.losses.categorical_crossentropy, optimizer=keras.optimizers.Adam(),metrics=['accuracy'])
+	classify_train = full_model.fit(train_X, train_label, batch_size=batch_size,epochs=epochs,verbose=1,validation_data=(valid_X, valid_label))
+	for layer in full_model.layers[0:2*int(ConvLayersEnc)+3]:
    		layer.trainable = True
+	full_model.compile(loss=keras.losses.categorical_crossentropy, optimizer=keras.optimizers.Adam(),metrics=['accuracy'])
+	classify_train=full_model.fit(train_X, train_label, batch_size=batch_size,epochs=epochs,verbose=1,validation_data=(valid_X, valid_label))
+   	
 
 if __name__ == "__main__":
     main()
