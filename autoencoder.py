@@ -56,7 +56,7 @@ def DataProcess3(e):
 #user gives hyperparameters
 def GiveHyperparameters():
 
-	numOfLayers = int(input("Give number of layers: "))
+	numOfLayers = int(input("Give number of layers(at least 5): "))
 	x_filter = int(input("Give the x coordinate of filter: "))
 	y_filter = int(input("Give the y coordinate of filter: "))
 
@@ -80,6 +80,7 @@ def GiveHyperparameters():
 
 #Built Encoder of autoencoder
 def Encoder(input_img, filtersPerLayer, ConvLayersEnc, x_filter, y_filter):
+
 	count = 0
 
 	for value in filtersPerLayer:
@@ -153,7 +154,7 @@ def main():
 
 		autoencoder.summary()
 
-		#autoencoder_train = autoencoder.fit(train_X, train_ground, batch_size=batch_size,epochs=epochs,verbose=1,validation_data=(valid_X, valid_ground))
+		autoencoder_train = autoencoder.fit(train_X, train_ground, batch_size=batch_size,epochs=epochs,verbose=1,validation_data=(valid_X, valid_ground))
 
 		listNumOfLayers.append(numOfLayers)
 		list_xfilter.append(x_filter)
@@ -162,12 +163,10 @@ def main():
 		listEpochs.append(epochs)
 		listBatchSize.append(batch_size)
 
-		#loss = autoencoder_train.history['loss']
-		#val_loss = autoencoder_train.history['val_loss']
-		#listLoss.append(loss[epochs-1]) #add at list loss value from last epoch
-		#listValLoss.append(val_loss[epochs-1]) #add at list val_loss value from last epoch
-		listLoss = []
-		listValLoss = []
+		loss = autoencoder_train.history['loss']
+		val_loss = autoencoder_train.history['val_loss']
+		listLoss.append(loss[epochs-1]) #add at list loss value from last epoch
+		listValLoss.append(val_loss[epochs-1]) #add at list val_loss value from last epoch
 
 		print("Give 1 if you want to do another experiment\nGive 2 if you want plots\nGive 3 if you want to save the current model")
 		doNext = int(input("Choose 1,2 or 3: "))
@@ -187,7 +186,7 @@ def main():
 			xs = list(range(len(listEpochs)))
 			int2str = []
 			for value in listEpochs:
-				int2str.append(str(value))
+				int2str.append(str(value)) #if listEpochs=[50,25,50] then with this way x axis at subplot will be [50,25,50], instead of [25,50]
 
 			plt.subplot(numplots, 1, 1)
 			plt.xticks(xs,int2str)
@@ -303,32 +302,32 @@ def main():
 
 
 			plt.show()
-			plt.savefig("temp.png")
+			plt.savefig("autoencoderPlots.png")
 			break
 		if doNext == 3:
 			path = input("Give the path: ")
-			f = open("info.txt", "w")
-			f.write(str(numOfLayers));
-			f.write("\n");
-			f.write(str(x_filter));
-			f.write("\n");
-			f.write(str(y_filter));
-			f.write("\n");
-			f.write(str(filtersPerLayer));
-			f.write("\n");
-			f.write(str(epochs));
-			f.write("\n");
-			f.write(str(batch_size));
-			f.write("\n");
-			f.write(str(ConvLayersEnc));
-			f.write("\n");
-			f.write(str(ConvLayersDec));
-			f.write("\n");
-			f.close()
-			#autoencoder.save(path)
-			print(numOfLayers,"\n",x_filter,"\n",y_filter,"\n",filtersPerLayer,"\n",epochs,"\n",batch_size,"\n",ConvLayersEnc,"\n",ConvLayersDec)
-			break
+			autoencoder.save(path) #save model(autoencoder)
+			#save hyperparameters:
+			fd1 = open("info.txt", "w")
+			fd1.write(str(numOfLayers))
+			fd1.write("\n")
+			fd1.write(str(x_filter))
+			fd1.write("\n")
+			fd1.write(str(y_filter))
+			fd1.write("\n")
+			fd1.write(str(filtersPerLayer))
+			fd1.write("\n")
+			fd1.write(str(epochs))
+			fd1.write("\n")
+			fd1.write(str(batch_size))
+			fd1.write("\n")
+			fd1.write(str(ConvLayersEnc))
+			fd1.write("\n")
+			fd1.write(str(ConvLayersDec))
+			fd1.write("\n")
+			fd1.close()
 
+			break
 
 	#ta numOfLayers,x_filter,y_filter,filtersPerLayer,epochs,batch_size,ConvLayersEnc,ConvLayersDec
 	#exoyn tis times toy teleytaioy peiramatos

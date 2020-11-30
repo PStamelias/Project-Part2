@@ -1,127 +1,289 @@
 import sys
-import tensorflow as tf
-from tensorflow import keras
-from keras.models import Sequential
-from keras.layers import Dense, Flatten, Conv2D, MaxPooling2D, Dropout
-from tensorflow.keras import layers
-from keras.layers import Input,UpSampling2D
-from keras.utils import to_categorical
+from matplotlib import pyplot as plt
 import numpy as np
-from keras.models import load_model
-import matplotlib.pyplot as plt
-from autoencoder import getInfo
-import ast 
-from autoencoder import createNParray
-from autoencoder import Encoder
+import six
+import numpy as np
+import pandas as pd
+import keras
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import classification_report
+from keras.layers import Input,Dense,Flatten,Conv2D,MaxPooling2D,UpSampling2D
+from keras.layers.normalization import BatchNormalization
+from keras.models import Model, load_model
+from keras.optimizers import RMSprop
+from keras.utils import to_categorical
+from autoencoder import Encoder,getInfo,createNParray,DataProcess1,DataProcess2
+import ast
 
-def Opening_set_file(file):
-	image_number,rows_number,columns_number=getInfo(file)
-	return image_number,rows_number,columns_number
 
-def Opening_labels_file(f):
-	temp = f.read(4) 
-	temp = f.read(4) 
-	temp = np.frombuffer(temp,dtype = np.uint8).astype(np.int64)
-	number_of_items=(temp[0]<<24)|(temp[1]<<16)|(temp[2]<<8)|temp[3]
-	return number_of_items
+def getInfoLabel(f):
+	temp = f.read(4) #pass first 4 bytes that are the magic number
 
-def fc(enco):
-    flat = Flatten()(enco)
-    den = Dense(128, activation='relu')(flat)
-    num_classes=10
-    out = Dense(num_classes, activation='softmax')(den)
-    return out
+	temp = f.read(4) #read 4 bytes
+	temp = np.frombuffer(temp,dtype = np.uint8).astype(np.int64) #convert the string that stored in temp into an array(numpy) of integers
+			#temp array has 4 integers, each integer represents a byte of number number_of_images
+	img_number = (temp[0]<<24)|(temp[1]<<16)|(temp[2]<<8)|temp[3] #convert the temp array into an integer
 
-def createNParray_of_Labels_set(f,number):
-	e=f.read(number)
-	e=np.frombuffer(e,dtype = np.uint8).astype(np.int64)  
+	return img_number
+
+
+#Creating NumPy Array with labels from file with file descriptor f
+def createNParrayLabel(f,image_number):
+	e = f.read(image_number*1)     #at the beginning e is string with labels
+	e = np.frombuffer(e,dtype = np.uint8).astype(np.int64)  #convert string to numpy array of integers
+
 	return e
 
 
+def fullyConnected(encoded,filtersFC):
+    fltn = Flatten()(encoded)
+    fc = Dense(filtersFC, activation='relu')(fltn)      #fully connected layer
+    outClassifier = Dense(10, activation='softmax')(fc) #output layer
 
-def reshaping(e1,e2,e3,e4,x1,y1,x2,y2):
-	e1=e1.reshape(-1,x1,y1,1)
-	e2=e2.reshape(-1,1)
-	e3=e3.reshape(-1,x2,y2,1)
-	e4=e4.reshape(-1,1)
-	return e1,e2,e3,e4
+    return outClassifier
+
 
 def main():
-	training_set=""
-	training_labels=""
-	test_set=""
-	test_labels=""
-	model=""    
-	coun1=False
-	coun2=False
-	inChannel=1
-	coun3=False
-	coun4=False
-	coun5=False
-	for i in range(0,10):
-		if sys.argv[i]=='-d' and coun1==False:
-			coun1=True
-			training_set=sys.argv[i+1]
-		elif sys.argv[i]=='-d1' and coun2==False:
-			coun2=True
-			training_labels=sys.argv[i+1]
-		elif sys.argv[i]=='-t' and coun3==False:
-			coun3=True
-			test_set=sys.argv[i+1]
-		elif sys.argv[i]=='-t1' and coun4==False:
-			coun4=True
-			test_labels=sys.argv[i+1]
-		elif sys.argv[i]=='-model' and coun5==False:
-			coun5=True
-			model_string=sys.argv[i+1]
-		if coun1==True and coun2==True and coun3==True and coun4==True and coun5==True:
+
+	for pos in range(1,len(sys.argv)-1,2): #take values in range [1,len(sys.argv)-2] with step 2
+		if sys.argv[pos] == '-d': #if this argument is '-d'
+			training_set = sys.argv[pos+1]  #then the next argument will be training set
+		if sys.argv[pos] == '-dl':
+			training_labels = sys.argv[pos+1]
+		if sys.argv[pos] == '-t':
+			test_set = sys.argv[pos+1]
+		if sys.argv[pos] == '-tl':
+			test_labels = sys.argv[pos+1]
+		if sys.argv[pos] == '-model':
+			autoencoderModel = sys.argv[pos+1]
+
+	#Read hyperparameters that we use in autoencoder:
+	fd = open("info.txt","r")
+	newlist = [line.rstrip() for line in fd.readlines()]
+	numOfLayers = int(newlist[0])
+	x_filter = int(newlist[1])
+	y_filter = int(newlist[2])
+	res = newlist[3]
+	filtersPerLayer = ast.literal_eval(res)
+	epochs = int(newlist[4])
+	batch_size = int(newlist[5])
+	ConvLayersEnc = int(newlist[6])
+	ConvLayersDec = int(newlist[7])
+	fd.close()
+
+	#training_set preprocessing:
+	fd1 = open(training_set,"rb")
+	image_number,rows_number,columns_number = getInfo(fd1) #Getting info about Dataset
+	e = createNParray(fd1,image_number,rows_number,columns_number) #Creating NumPy Array
+	fd1.close()
+	e = DataProcess1(e,rows_number,columns_number) #Data Processing
+	trainingData = DataProcess2(e) #Data Processing
+
+	#test_set preprocessing:
+	fd2 = open(test_set,"rb")
+	image_number,rows_number1,columns_number1 = getInfo(fd2) #Getting info about Dataset
+	e = createNParray(fd2,image_number,rows_number1,columns_number1) #Creating NumPy Array
+	fd2.close()
+	e = DataProcess1(e,rows_number1,columns_number1) #Data Processing
+	testData = DataProcess2(e) #Data Processing
+
+	#training_labels preprocessing:
+	fd3 = open(training_labels,"rb")
+	image_number = getInfoLabel(fd3)
+	trainingLabels = createNParrayLabel(fd3,image_number)
+	fd3.close()
+
+	#test_labels preprocessing:
+	fd4 = open(test_labels,"rb")
+	image_number = getInfoLabel(fd4)
+	testLabels = createNParrayLabel(fd4,image_number)
+	fd4.close()
+
+
+	train_Y_one_hot = to_categorical(trainingLabels)
+	#if trainingLabels[0] is 8, then train_Y_one_hot[0] is vector [0., 0., 0., 0., 0., 0., 0., 0., 1., 0.]
+	test_Y_one_hot = to_categorical(testLabels)
+
+	train_X,valid_X,train_label,valid_label = train_test_split(trainingData,train_Y_one_hot,test_size=0.2,random_state=13)
+	#train_X,train_label,testData,test_Y_one_hot
+
+	inChannel = 1
+	x, y = rows_number, columns_number
+	input_img = Input(shape = (x, y, inChannel)) #input of encoder
+
+	autoencoder_model = keras.models.load_model(autoencoderModel) #load autoencoder
+	encoderLayers = 3 + 2*ConvLayersEnc #encoder layers = InputLayer + 2*MaxpoolingLayers + ConvolutionalLayers + BatchNormalizationLayers
+										#ConvolutionalLayers and BatchNormalizationLayers are equal
+	encoded = Encoder(input_img, filtersPerLayer, ConvLayersEnc, x_filter, y_filter)
+
+	listFiltersFC = []
+	listEpochs = []
+	listBatchSize = []
+	listLoss = []
+	listTestLoss = []
+	listAccuracy = []
+	listTestAccuracy = []
+	listPredictedClasses = []
+
+	while True:
+
+		filtersFC = int(input("Give number of filters at fully connected layer: "))
+		epochs = int(input("Give epochs: "))
+		batch_size = int(input("Give batch size: "))
+
+		full_model = Model(input_img,fullyConnected(encoded,filtersFC))
+
+		for l1,l2 in zip(full_model.layers[:encoderLayers],autoencoder_model.layers[0:encoderLayers]):
+			l1.set_weights(l2.get_weights()) #full_model takes encoder weights from autoencoder
+		##############
+		for layer in full_model.layers[0:encoderLayers]: #at first I do not train the encoder part of full model
+			layer.trainable = False
+
+		full_model.compile(loss=keras.losses.categorical_crossentropy, optimizer=keras.optimizers.Adam(),metrics=['accuracy'])
+		full_model.summary()
+
+		classify_train = full_model.fit(train_X, train_label, batch_size=batch_size,epochs=epochs,verbose=1,validation_data=(valid_X, valid_label))
+		##############
+		for layer in full_model.layers[0:encoderLayers]: #at second time I will train the full model again with the encoder part
+			layer.trainable = True
+
+		full_model.compile(loss=keras.losses.categorical_crossentropy, optimizer=keras.optimizers.Adam(),metrics=['accuracy'])
+
+		classify_train = full_model.fit(train_X, train_label, batch_size=batch_size,epochs=epochs,verbose=1,validation_data=(valid_X, valid_label))
+		##############
+		listFiltersFC.append(filtersFC)
+		listEpochs.append(epochs)
+		listBatchSize.append(batch_size)
+
+		loss = classify_train.history['loss']
+		listLoss.append(loss[epochs-1])
+		accuracy = classify_train.history['accuracy']
+		listAccuracy.append(accuracy[epochs-1])
+
+		testEvaluate = full_model.evaluate(testData, test_Y_one_hot, verbose=0)
+		listTestLoss.append(testEvaluate[0])
+		listTestAccuracy.append(testEvaluate[1])
+
+		predictedClasses = full_model.predict(testData)
+		predictedClasses = np.argmax(np.round(predictedClasses),axis=1)
+		listPredictedClasses.append(predictedClasses)
+
+		print("Give 1 if you want to do another experiment\nGive 2 if you want plots\nGive 3 if you want to classify the images of test set")
+		doNext = int(input("Choose 1,2 or 3: "))
+
+		if doNext == 2:
+			f, axs = plt.subplots(6,1,figsize=(25,42))
+			##########
+			xs = list(range(len(listEpochs)))
+			int2str = []
+			for value in listEpochs:
+				int2str.append(str(value))
+
+			plt.subplot(6, 1, 1)
+			plt.xticks(xs,int2str)
+			plt.plot(xs, listAccuracy, 'bo', label='training accuracy')
+			plt.plot(xs, listTestAccuracy, 'gs', label='test accuracy')
+			plt.xlabel('epochs at each experiment')
+			plt.ylabel('acc/test_acc')
+			plt.title('Accuracy/Test_Accuracy per number of epochs')
+			plt.legend()
+
+			plt.subplot(6, 1, 2)
+			plt.xticks(xs,int2str)
+			plt.plot(xs, listLoss, 'bo', label='training loss')
+			plt.plot(xs, listTestLoss, 'gs', label='test loss')
+			plt.xlabel('epochs at each experiment')
+			plt.ylabel('loss/val_loss')
+			plt.title('Loss/Val_Loss per number of epochs')
+			plt.legend()
+
+			xs.clear()
+			int2str.clear()
+			##########
+			xs = list(range(len(listBatchSize)))
+			int2str = []
+			for value in listBatchSize:
+				int2str.append(str(value))
+
+			plt.subplot(6, 1, 3)
+			plt.xticks(xs,int2str)
+			plt.plot(xs, listAccuracy, 'bo', label='training accuracy')
+			plt.plot(xs, listTestAccuracy, 'gs', label='test accuracy')
+			plt.xlabel('batch_size at each experiment')
+			plt.ylabel('acc/test_acc')
+			plt.title('Accuracy/Test_Accuracy per batch_size')
+			plt.legend()
+
+			plt.subplot(6, 1, 4)
+			plt.xticks(xs,int2str)
+			plt.plot(xs, listLoss, 'bo', label='training loss')
+			plt.plot(xs, listTestLoss, 'gs', label='test loss')
+			plt.xlabel('batch_size at each experiment')
+			plt.ylabel('loss/val_loss')
+			plt.title('Loss/Val_Loss per batch_size')
+			plt.legend()
+
+			xs.clear()
+			int2str.clear()
+			##########
+			xs = list(range(len(listFiltersFC)))
+			int2str = []
+			for value in listFiltersFC:
+				int2str.append(str(value))
+
+			plt.subplot(6, 1, 5)
+			plt.xticks(xs,int2str)
+			plt.plot(xs, listAccuracy, 'bo', label='training accuracy')
+			plt.plot(xs, listTestAccuracy, 'gs', label='test accuracy')
+			plt.xlabel('filters of FC at each experiment')
+			plt.ylabel('acc/test_acc')
+			plt.title('Accuracy/Test_Accuracy per number of filters at FC layer')
+			plt.legend()
+
+			plt.subplot(6, 1, 6)
+			plt.xticks(xs,int2str)
+			plt.plot(xs, listLoss, 'bo', label='training loss')
+			plt.plot(xs, listTestLoss, 'gs', label='test loss')
+			plt.xlabel('filters of FC at each experiment')
+			plt.ylabel('loss/val_loss')
+			plt.title('Loss/Val_Loss per number of filters at FC layer')
+			plt.legend()
+
+			xs.clear()
+			int2str.clear()
+			##########
+			plt.show()
+			plt.savefig("classifyPlots.png")
+
+			#Let's print arrays for precision,recall,f1-score,support (of previously experiments):
+			for predictedClass in listPredictedClasses:
+				classesNames = ["Class {}".format(i) for i in range(10)]
+				print(classification_report(testLabels, predictedClass, target_names=classesNames))
+
 			break
-	######Data   Preprocessing
-	f1=open(training_set,'rb')
-	f2=open(training_labels,'rb')
-	f3=open(test_set,'rb')
-	f4=open(test_labels,'rb')
-	image_number_train_set,rows_number_train_set,columns_number_train_set=Opening_set_file(f1)
-	image_number_test_set,rows_number_test_set,columns_number_test_set=Opening_set_file(f3)
-	number_of_items_training_label=Opening_labels_file(f2)
-	number_of_items_test_label=Opening_labels_file(f4)
-	e1=createNParray(f1,image_number_train_set,rows_number_train_set,columns_number_train_set)
-	e3=createNParray(f3,image_number_test_set,rows_number_test_set,columns_number_test_set)
-	e2=createNParray_of_Labels_set(f2,number_of_items_training_label)
-	e4=createNParray_of_Labels_set(f4,number_of_items_test_label)
-	e1,e2,e3,e4=reshaping(e1,e2,e3,e4,rows_number_train_set,columns_number_train_set,rows_number_test_set,columns_number_test_set)
-	f1.close()
-	f2.close()
-	f3.close()
-	f4.close()
-	###########################
-	f=open("info.txt","r")
-	newlist = [line.rstrip() for line in f.readlines()]
-	numOfLayers=newlist[0]
-	x_filter=newlist[1]
-	y_filter=newlist[2]
-	filtersPerLayer=newlist[3]
-	epochs=newlist[4]
-	batch_size=newlist[5]
-	ConvLayersEnc=newlist[6]
-	ConvLayersDec=newlist[7]
-	res = ast.literal_eval(filtersPerLayer)
-	f.close()
-	model = keras.models.load_model(model_string)
-	input_img = Input(shape = (rows_number_train_set, columns_number_train_set, inChannel))
-	enco=Encoder(input_img, res,int(ConvLayersEnc),int(x_filter),int(y_filter))
-	full_model = model(input_img,fc(enco))
-	for l1,l2 in zip(full_model.layers[:2*int(ConvLayersEnc)+3],autoencoder.layers[0:2*int(ConvLayersEnc)+3]):
-		l1.set_weights(l2.get_weights())
-	for layer in full_model.layers[0:2*int(ConvLayersEnc)+3]:
-   		layer.trainable = False
-	full_model.compile(loss=keras.losses.categorical_crossentropy, optimizer=keras.optimizers.Adam(),metrics=['accuracy'])
-	classify_train = full_model.fit(train_X, train_label, batch_size=batch_size,epochs=epochs,verbose=1,validation_data=(valid_X, valid_label))
-	for layer in full_model.layers[0:2*int(ConvLayersEnc)+3]:
-   		layer.trainable = True
-	full_model.compile(loss=keras.losses.categorical_crossentropy, optimizer=keras.optimizers.Adam(),metrics=['accuracy'])
-	classify_train=full_model.fit(train_X, train_label, batch_size=batch_size,epochs=epochs,verbose=1,validation_data=(valid_X, valid_label))
-   	
+		if doNext == 3:
+			#Correct Labels:
+			correct = np.where(predictedClasses==testLabels)[0]
+			f, axs = plt.subplots(4,4,figsize=(25,15))
+			print("Found %d correct labels" % len(correct))
+			for i, correct in enumerate(correct[:16]): #print 16 correct labels
+				plt.subplot(4,4,i+1)
+				plt.imshow(testData[correct].reshape(28,28), cmap='gray', interpolation='none')
+				plt.title("Predicted {}, Class {}".format(predictedClasses[correct], testLabels[correct]))
+				plt.tight_layout()
+				plt.savefig("correctFC.png")
+			#Incorrect Labels:
+			incorrect = np.where(predictedClasses!=testLabels)[0]
+			print("Found %d incorrect labels" % len(incorrect))
+			for i, incorrect in enumerate(incorrect[:16]): #print 16 incorrect labels
+				plt.subplot(4,4,i+1)
+				plt.imshow(testData[incorrect].reshape(28,28), cmap='gray', interpolation='none')
+				plt.title("Predicted {}, Class {}".format(predictedClasses[incorrect], testLabels[incorrect]))
+				plt.tight_layout()
+				plt.savefig("incorrectFC.png")
+
+			break
+
 
 if __name__ == "__main__":
-    main()
+	main()
