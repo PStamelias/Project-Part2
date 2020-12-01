@@ -150,6 +150,7 @@ def main():
 		full_model.compile(loss=keras.losses.categorical_crossentropy, optimizer=keras.optimizers.Adam(),metrics=['accuracy'])
 
 		classify_train = full_model.fit(train_X, train_label, batch_size=batch_size,epochs=epochs,verbose=1,validation_data=(valid_X, valid_label))
+		#full_model.save('classification.h5')
 		##############
 		listFiltersFC.append(filtersFC)
 		listEpochs.append(epochs)
