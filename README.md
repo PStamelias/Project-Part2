@@ -1,7 +1,7 @@
 # 2020-21 Ανάπτυξη Λογισμικού για Αλγοριθμικά προβλήματα - Project 2
 
-* 1115201400190  Προκόπης Σταμελιάς
-* 1115201600095  Άννα Λογοθέτη
+* 1115201400190  [Προκόπης Σταμελιάς](https://github.com/skagos)
+* 1115201600095  [Άννα Λογοθέτη](https://github.com/annalogotheti)
 
 * link στο Git: https://github.com/skagos/Project-Part2
 
