@@ -39,7 +39,6 @@ Autoencoder και Classifier.
 Το classification.h5 είναι ένα προεκπαιδευμένο μοντέλο classifier (στο οποίο χρησιμοποιήθηκε το encoder κομμάτι του προεκπαιδευμένου μοντέλου autoencoder.h5) το οποίο εκπαιδεύτηκε για 10 epochs, 64 batch_size και 128 φίλτρα στο fully connected layer του classifier. Το αποτέλεσμα που έδωσε το μοντέλο classification.h5 για το test set(t10k-images.idx3-ubyte) ήταν το εξής:
 
 > Found 9874 correct labels
->
 > Found 126 incorrect labels
 
 Και η κατηγοριοποίηση των εικόνων του test set (συγκεκριμένα 16 ενδεικτικές εικόνες για αυτές που κατηγοριοποιήθηκαν σωστά και 16 ενδεικτικές εικόνες για αυτές που κατηγοριοποιήθηκαν λάθος) φαίνεται στα αρχεία correctFC.png και incorrectFC.png.
